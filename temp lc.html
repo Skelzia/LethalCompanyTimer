@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luna Timer with Game Time</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .timer, .game-time {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        .day-phase {
+            display: flex;
+            align-items: center;
+            font-size: 1.5em;
+        }
+        .phase-symbol {
+            font-size: 2em;
+            margin-right: 10px;
+        }
+        button {
+            font-size: 1.2em;
+            margin: 5px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .start {
+            background-color: #27ae60;
+            color: white;
+        }
+        .stop {
+            background-color: #c0392b;
+            color: white;
+        }
+        .reset {
+            background-color: #f39c12;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Luna Timer</h1>
+        <div class="timer" id="realTimer">00:00:00</div>
+        <div class="game-time" id="gameTimer">7:40 AM</div>
+        <div class="day-phase" id="dayPhase">
+            <span class="phase-symbol" id="phaseSymbol">☀️</span>
+            <span id="phaseText">Full Sun</span>
+        </div>
+        <div>
+            <button class="start" onclick="startTimer()">Start</button>
+            <button class="stop" onclick="stopTimer()">Stop</button>
+            <button class="reset" onclick="resetTimer()">Reset</button>
+        </div>
+    </div>
+
+    <script>
+        let startTime;
+        let elapsedTime = 0;
+        let timerInterval;
+
+        // Game time constants
+        const startGameTime = { hours: 7, minutes: 40, period: 'AM' };
+        const realSecondToGameMinute = 1.4;
+        const gameDayDuration = 700; // seconds
+
+        // Format real time
+        function formatTime(time) {
+            const hours = Math.floor(time / 3600000);
+            const minutes = Math.floor((time % 3600000) / 60000);
+            const seconds = Math.floor((time % 60000) / 1000);
+            return (
+                String(hours).padStart(2, '0') + ':' +
+                String(minutes).padStart(2, '0') + ':' +
+                String(seconds).padStart(2, '0')
+            );
+        }
+
+        // Format game time
+        function formatGameTime(minutesSinceStart) {
+            const totalMinutes = startGameTime.hours * 60 + startGameTime.minutes + minutesSinceStart;
+            let gameHours = Math.floor(totalMinutes / 60) % 12;
+            if (gameHours === 0) gameHours = 12;
+            const gameMinutes = totalMinutes % 60;
+            const period = Math.floor(totalMinutes / 720) % 2 === 0 ? 'AM' : 'PM';
+            return `${gameHours}:${String(gameMinutes).padStart(2, '0')} ${period}`;
+        }
+
+        // Determine the phase of the day
+        function getDayPhase(minutesSinceStart) {
+            const totalMinutes = startGameTime.hours * 60 + startGameTime.minutes + minutesSinceStart;
+            const gameHours = Math.floor(totalMinutes / 60) % 24;
+            const gameMinutes = totalMinutes % 60;
+
+            if (gameHours >= 8 && (gameHours < 12 || (gameHours === 12 && gameMinutes === 0))) {
+                return { symbol: '☀️', text: 'Full Sun' };
+            } else if (gameHours >= 12 && gameHours < 17.5) {
+                return { symbol: '🌇', text: 'Setting Sun' };
+            } else if (gameHours >= 17.5 && gameHours < 22) {
+                return { symbol: '🌙', text: 'Crescent Moon' };
+            } else if (gameHours >= 22 && gameHours < 24) {
+                return { symbol: '💀', text: 'Human Skull' };
+            }
+        }
+
+        function updateDisplay() {
+            // Update real time
+            const timerElement = document.getElementById('realTimer');
+            timerElement.textContent = formatTime(elapsedTime);
+
+            // Update game time
+            const gameMinutesPassed = Math.floor(elapsedTime / 1000 * realSecondToGameMinute);
+            const gameTimerElement = document.getElementById('gameTimer');
+            gameTimerElement.textContent = formatGameTime(gameMinutesPassed);
+
+            // Update day phase
+            const dayPhase = getDayPhase(gameMinutesPassed);
+            const phaseSymbolElement = document.getElementById('phaseSymbol');
+            const phaseTextElement = document.getElementById('phaseText');
+            phaseSymbolElement.textContent = dayPhase.symbol;
+            phaseTextElement.textContent = dayPhase.text;
+        }
+
+        function startTimer() {
+            if (!timerInterval) {
+                startTime = Date.now() - elapsedTime;
+                timerInterval = setInterval(() => {
+                    elapsedTime = Date.now() - startTime;
+                    updateDisplay();
+                }, 1000);
+            }
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        function resetTimer() {
+            stopTimer();
+            elapsedTime = 0;
+            updateDisplay();
+        }
+
+        // Initialize display
+        updateDisplay();
+    </script>
+</body>
+</html>
